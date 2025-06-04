@@ -54,11 +54,28 @@ class Logger {
 
     [void]Log([array]$table){
 
-        & { foreach ($entry in $table){
+        if ($table[0] -is [string]){
+            & { foreach ($entry in $table){
 
-            (Get-Date).ToString() + '    -    ' + $entry
+                (Get-Date).ToString() + '    -    ' + $entry
+    
+            }} | Out-File -FilePath $this.run_log -Append -Encoding utf8
+        }
+        elseif ($table[0] -is [pscustomobject]) {
 
-        }} | Out-File -FilePath $this.run_log -Append -Encoding utf8
+            $properties = $table[0].PSObject.Properties.Name
+
+            # Calculate column widths based on max length of values (including headers)
+            $col_widths = @{}
+            foreach ($prop in $properties) {
+                $max_length = ($table | ForEach-Object { ($_.$prop).ToString().Length } | Measure-Object -Maximum).Maximum
+                $header_length = $prop.Length
+                $col_widths[$prop] = [Math]::Max($max_length, $header_length) + 2
+
+                #foreach ($obj in $table){ }
+            }
+            $col_widths
+        }
     }
 
     [void]Finish(){
@@ -75,7 +92,41 @@ class Logger {
     }
 }
 
-$log_tool = New-Object Logger
-$log_tool.Log("This is a Test")
-$log_tool.Finish()
+$testData = @(
+    [PSCustomObject]@{
+        Name       = "Alice Johnson"
+        Age        = 29
+        Department = "Finance"
+        IsActive   = $true
+    },
+    [PSCustomObject]@{
+        Name       = "Bob Smith"
+        Age        = 35
+        Department = "IT"
+        IsActive   = $false
+    },
+    [PSCustomObject]@{
+        Name       = "Carla Ramirez"
+        Age        = 41
+        Department = "HR"
+        IsActive   = $true
+    },
+    [PSCustomObject]@{
+        Name       = "David Lee"
+        Age        = 23
+        Department = "Marketing"
+        IsActive   = $true
+    },
+    [PSCustomObject]@{
+        Name       = "Ella Patel"
+        Age        = 32
+        Department = "Sales"
+        IsActive   = $false
+    }
+)
 
+$logger = [Logger]::new()
+
+$logger.Log($testData)
+
+$logger.Finish()
